@@ -40,8 +40,11 @@ export async function getInvoiceById(id: string) {
 export async function createInvoice(formData: FormData) {
   const supabase = await createClient()
   
-  const rawData = {
-    tipo: formData.get('tipo'),
+  const tipo = formData.get('tipo')
+  const serviciosJSON = formData.get('servicios')
+  
+  const rawData: any = {
+    tipo,
     numero_factura: Number(formData.get('numero_factura')),
     fecha_emision: formData.get('fecha_emision'),
     entidad: formData.get('entidad'),
@@ -53,6 +56,15 @@ export async function createInvoice(formData: FormData) {
     iva: Number(formData.get('iva')),
     monto_total: Number(formData.get('monto_total')),
     estado: formData.get('estado')
+  }
+
+  // Si es factura de venta con múltiples servicios, guardar el array
+  if (tipo === 'venta' && serviciosJSON) {
+    try {
+      rawData.servicios = JSON.parse(serviciosJSON as string)
+    } catch (e) {
+      console.error('Error parsing servicios:', e)
+    }
   }
 
   const { error } = await supabase

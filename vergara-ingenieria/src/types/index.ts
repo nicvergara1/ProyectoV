@@ -1,3 +1,9 @@
+export type InvoiceService = {
+  servicio: string
+  descripcion?: string
+  monto: number
+}
+
 export type Invoice = {
   id: string
   created_at: string
@@ -9,6 +15,7 @@ export type Invoice = {
   descripcion?: string
   tipo: 'compra' | 'venta'
   servicio?: string
+  servicios?: InvoiceService[] // Array de servicios para facturas de venta
   monto_neto: number
   iva: number
   monto_total: number

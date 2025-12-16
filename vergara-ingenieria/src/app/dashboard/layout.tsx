@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { LayoutDashboard, PieChart, Settings, LogOut, Zap, FileText, Menu, X, Home, Package, History } from 'lucide-react'
+import { LayoutDashboard, PieChart, Settings, LogOut, Zap, FileText, Menu, X, Home, Package, History, User } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
@@ -20,6 +20,8 @@ export default function DashboardLayout({
 }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [userName, setUserName] = useState<string>('')
+  const [userInitial, setUserInitial] = useState<string>('U')
   const router = useRouter()
   const supabase = createClient()
 
@@ -29,6 +31,10 @@ export default function DashboardLayout({
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) {
           router.push('/login')
+        } else if (session.user) {
+          const displayName = session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || 'Usuario'
+          setUserName(displayName)
+          setUserInitial(displayName.charAt(0).toUpperCase())
         }
       } catch (error) {
         console.error('Error checking auth:', error)
@@ -168,10 +174,18 @@ export default function DashboardLayout({
             </button>
             <h1 className="text-xl font-semibold text-slate-800">Panel de Control</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
-              VI
-            </div>
+          <div className="flex items-center gap-3">
+            <Link 
+              href="/dashboard/settings"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors group"
+            >
+              <span className="hidden sm:block text-sm font-medium text-slate-700 group-hover:text-slate-900">
+                {userName}
+              </span>
+              <div className="h-9 w-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                {userInitial}
+              </div>
+            </Link>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 md:p-6">

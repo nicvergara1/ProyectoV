@@ -77,15 +77,26 @@ export default function NewInvoicePage() {
   async function handleSubmit(formData: FormData) {
     setIsPending(true)
     
-    // Para facturas de venta, combinar servicios en descripción y servicio
+    // Para facturas de venta, enviar array de servicios y descripción combinada
     if (type === 'venta') {
-      const serviciosDescripcion = servicios
+      const serviciosValidos = servicios
         .filter(s => s.servicio && s.monto)
-        .map(s => `${s.servicio}${s.descripcion ? ' - ' + s.descripcion : ''}: $${Number(s.monto).toLocaleString('es-CL')}`)
+        .map(s => ({
+          servicio: s.servicio,
+          descripcion: s.descripcion,
+          monto: Number(s.monto)
+        }))
+      
+      // Guardar array de servicios como JSON
+      formData.set('servicios', JSON.stringify(serviciosValidos))
+      
+      // También guardar descripción combinada para compatibilidad
+      const serviciosDescripcion = serviciosValidos
+        .map(s => `${s.servicio}${s.descripcion ? ' - ' + s.descripcion : ''}: $${s.monto.toLocaleString('es-CL')}`)
         .join('\n')
       
       formData.set('descripcion', serviciosDescripcion)
-      formData.set('servicio', servicios[0]?.servicio || 'Servicios Múltiples')
+      formData.set('servicio', serviciosValidos[0]?.servicio || 'Servicios Múltiples')
     }
     
     // Append calculated values

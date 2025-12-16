@@ -81,15 +81,29 @@ export function InvoicePDFButton({ invoice }: InvoicePDFButtonProps) {
     doc.text('Santiago', 150, 79)
 
     // --- Details Table ---
-    const tableBody = [
-      [
-        invoice.servicio || 'Servicios Profesionales', // Item Name
-        invoice.descripcion || 'Sin descripción', // Description
-        1, // Quantity (Hardcoded as 1 for now)
-        `$${invoice.monto_neto.toLocaleString('es-CL')}`, // Unit Price
-        `$${invoice.monto_neto.toLocaleString('es-CL')}` // Total
+    let tableBody: any[] = []
+    
+    // Si es factura de venta con múltiples servicios, mostrar cada uno como ítem
+    if (invoice.tipo === 'venta' && invoice.servicios && invoice.servicios.length > 0) {
+      tableBody = invoice.servicios.map((servicio) => [
+        servicio.servicio, // Item Name
+        servicio.descripcion || 'Sin descripción', // Description
+        1, // Quantity
+        `$${servicio.monto.toLocaleString('es-CL')}`, // Unit Price
+        `$${servicio.monto.toLocaleString('es-CL')}` // Total
+      ])
+    } else {
+      // Factura de compra o venta antigua sin array de servicios
+      tableBody = [
+        [
+          invoice.servicio || 'Servicios Profesionales', // Item Name
+          invoice.descripcion || 'Sin descripción', // Description
+          1, // Quantity
+          `$${invoice.monto_neto.toLocaleString('es-CL')}`, // Unit Price
+          `$${invoice.monto_neto.toLocaleString('es-CL')}` // Total
+        ]
       ]
-    ]
+    }
 
     autoTable(doc, {
       startY: 100,
