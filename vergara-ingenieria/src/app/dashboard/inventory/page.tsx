@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react'
 import { getProducts, deleteProduct } from '@/app/actions/inventory'
 import Link from 'next/link'
-import { Plus, Search, Package, AlertTriangle, Trash2, MinusCircle } from 'lucide-react'
+import { Plus, Search, Package, AlertTriangle, Trash2, MinusCircle, Edit } from 'lucide-react'
 import { Product } from '@/types'
+import { ConfirmModal } from '@/components/ConfirmModal'
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null)
 
   useEffect(() => {
     loadProducts()
@@ -23,11 +25,16 @@ export default function InventoryPage() {
     setIsLoading(false)
   }
 
-  async function handleDelete(id: number) {
-    if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
-      await deleteProduct(id)
-      loadProducts()
-    }
+  const handleDeleteClick = (product: Product) => {
+    setProductToDelete(product)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!productToDelete) return
+    
+    await deleteProduct(productToDelete.id)
+    loadProducts()
+    setProductToDelete(null)
   }
 
   const filteredProducts = products.filter(product => 
@@ -163,12 +170,22 @@ export default function InventoryPage() {
                       ${(product.cantidad * product.precio_unitario).toLocaleString('es-CL')}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => handleDelete(product.id)}
-                        className="text-red-600 hover:text-red-800 p-1 rounded-md hover:bg-red-50 transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/dashboard/inventory/${product.id}/edit`}
+                          className="text-blue-600 hover:text-blue-800 p-1 rounded-md hover:bg-blue-50 transition-colors"
+                          title="Editar producto"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Link>
+                        <button
+                          onClick={() => handleDeleteClick(product)}
+                          className="text-red-600 hover:text-red-800 p-1 rounded-md hover:bg-red-50 transition-colors"
+                          title="Eliminar producto"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -177,6 +194,18 @@ export default function InventoryPage() {
           </table>
         </div>
       </div>
+
+      {/* Modal de confirmación */}
+      <ConfirmModal
+        isOpen={productToDelete !== null}
+        onClose={() => setProductToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Eliminar Producto"
+        message={productToDelete ? `¿Estás seguro de eliminar el producto "${productToDelete.nombre}"?\n\nCategoría: ${productToDelete.categoria}\nStock actual: ${productToDelete.cantidad} unidades\nValor total: $${(productToDelete.cantidad * productToDelete.precio_unitario).toLocaleString('es-CL')}\n\nEsta acción no se puede deshacer.` : ''}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        isDestructive={true}
+      />
     </div>
   )
 }

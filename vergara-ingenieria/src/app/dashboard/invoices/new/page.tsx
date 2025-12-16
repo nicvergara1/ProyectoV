@@ -41,13 +41,28 @@ export default function NewInvoicePage() {
   const [direccionEntidad, setDireccionEntidad] = useState('')
   const [descripcion, setDescripcion] = useState('')
 
+  // Servicios múltiples para facturas de venta
+  const [servicios, setServicios] = useState([{ servicio: '', descripcion: '', monto: '' }])
+
   // Calculate IVA and Total automatically
   useEffect(() => {
-    const net = Number(netAmount) || 0
-    const calculatedIva = Math.round(net * 0.19)
-    setIva(calculatedIva)
-    setTotal(net + calculatedIva)
-  }, [netAmount])
+    if (type === 'venta') {
+      // Sumar todos los montos de los servicios
+      const totalNeto = servicios.reduce((sum, item) => {
+        return sum + (Number(item.monto) || 0)
+      }, 0)
+      const calculatedIva = Math.round(totalNeto * 0.19)
+      setIva(calculatedIva)
+      setTotal(totalNeto + calculatedIva)
+      setNetAmount(totalNeto.toString())
+    } else {
+      // Para facturas de compra, usar el monto neto directo
+      const net = Number(netAmount) || 0
+      const calculatedIva = Math.round(net * 0.19)
+      setIva(calculatedIva)
+      setTotal(net + calculatedIva)
+    }
+  }, [netAmount, servicios, type])
 
   const handleRecognition = (data: any) => {
     if (data.numero_factura) setNumeroFactura(data.numero_factura)
@@ -61,9 +76,22 @@ export default function NewInvoicePage() {
 
   async function handleSubmit(formData: FormData) {
     setIsPending(true)
+    
+    // Para facturas de venta, combinar servicios en descripción y servicio
+    if (type === 'venta') {
+      const serviciosDescripcion = servicios
+        .filter(s => s.servicio && s.monto)
+        .map(s => `${s.servicio}${s.descripcion ? ' - ' + s.descripcion : ''}: $${Number(s.monto).toLocaleString('es-CL')}`)
+        .join('\n')
+      
+      formData.set('descripcion', serviciosDescripcion)
+      formData.set('servicio', servicios[0]?.servicio || 'Servicios Múltiples')
+    }
+    
     // Append calculated values
     formData.set('iva', iva.toString())
     formData.set('monto_total', total.toString())
+    formData.set('monto_neto', netAmount)
     
     const result = await createInvoice(formData)
     setIsPending(false)
@@ -74,6 +102,22 @@ export default function NewInvoicePage() {
     } else {
       alert('Error al guardar la factura: ' + result.error)
     }
+  }
+
+  const agregarServicio = () => {
+    setServicios([...servicios, { servicio: '', descripcion: '', monto: '' }])
+  }
+
+  const eliminarServicio = (index: number) => {
+    if (servicios.length > 1) {
+      setServicios(servicios.filter((_, i) => i !== index))
+    }
+  }
+
+  const actualizarServicio = (index: number, campo: string, valor: string) => {
+    const nuevosServicios = [...servicios]
+    nuevosServicios[index] = { ...nuevosServicios[index], [campo]: valor }
+    setServicios(nuevosServicios)
   }
 
   return (
@@ -256,77 +300,197 @@ export default function NewInvoicePage() {
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-800 mb-1">
-            {type === 'venta' ? 'Servicio Prestado' : 'Categoría de Compra'}
-          </label>
-          <select
-            name="servicio"
-            required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-slate-900"
-          >
-            <option value="">
-              {type === 'venta' ? 'Seleccionar Servicio...' : 'Seleccionar Categoría...'}
-            </option>
-            {(type === 'venta' ? SALES_SERVICES : PURCHASE_CATEGORIES).map(item => (
-              <option key={item} value={item}>{item}</option>
+        {type === 'venta' ? (
+          // Sección de servicios múltiples para facturas de venta
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-slate-800">Servicios Prestados</label>
+              <button
+                type="button"
+                onClick={agregarServicio}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+              >
+                <span className="text-lg leading-none">+</span>
+                Agregar Servicio
+              </button>
+            </div>
+            
+            {servicios.map((servicio, index) => (
+              <div key={index} className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-slate-600">Servicio #{index + 1}</span>
+                  {servicios.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => eliminarServicio(index)}
+                      className="text-xs text-red-600 hover:text-red-700 font-medium"
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Tipo de Servicio</label>
+                    <select
+                      value={servicio.servicio}
+                      onChange={(e) => actualizarServicio(index, 'servicio', e.target.value)}
+                      required
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-slate-900"
+                    >
+                      <option value="">Seleccionar...</option>
+                      {SALES_SERVICES.map(item => (
+                        <option key={item} value={item}>{item}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Monto</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600">$</span>
+                      <input
+                        type="number"
+                        value={servicio.monto}
+                        onChange={(e) => actualizarServicio(index, 'monto', e.target.value)}
+                        required
+                        min="0"
+                        className="w-full pl-7 pr-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Descripción del Servicio (Opcional)</label>
+                  <textarea
+                    value={servicio.descripcion}
+                    onChange={(e) => actualizarServicio(index, 'descripcion', e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                    placeholder="Detalles específicos del servicio..."
+                  />
+                </div>
+              </div>
             ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-800 mb-1">Descripción</label>
-          <textarea
-            name="descripcion"
-            rows={3}
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-            placeholder="Detalles de la factura..."
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
-          <div>
-            <label className="block text-sm font-medium text-slate-800 mb-1">Monto Neto</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600">$</span>
-              <input
-                type="number"
-                name="monto_neto"
+          </div>
+        ) : (
+          // Campo de servicio único para facturas de compra
+          <>
+            <div>
+              <label className="block text-sm font-medium text-slate-800 mb-1">Categoría de Compra</label>
+              <select
+                name="servicio"
                 required
-                min="0"
-                value={netAmount}
-                onChange={(e) => setNetAmount(e.target.value)}
-                className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-slate-900"
+              >
+                <option value="">Seleccionar Categoría...</option>
+                {PURCHASE_CATEGORIES.map(item => (
+                  <option key={item} value={item}>{item}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-800 mb-1">Descripción</label>
+              <textarea
+                name="descripcion"
+                rows={3}
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                placeholder="Detalles de la factura..."
               />
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-800 mb-1">IVA (19%)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600">$</span>
-              <input
-                type="text"
-                value={iva.toLocaleString('es-CL')}
-                readOnly
-                className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-md bg-slate-100 text-slate-700 cursor-not-allowed"
-              />
+          </>
+        )}
+
+        {type === 'compra' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <div>
+              <label className="block text-sm font-medium text-slate-800 mb-1">Monto Neto</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600">$</span>
+                <input
+                  type="number"
+                  name="monto_neto"
+                  required
+                  min="0"
+                  value={netAmount}
+                  onChange={(e) => setNetAmount(e.target.value)}
+                  className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-800 mb-1">IVA (19%)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600">$</span>
+                <input
+                  type="text"
+                  value={iva.toLocaleString('es-CL')}
+                  readOnly
+                  className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-md bg-slate-100 text-slate-700 cursor-not-allowed"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-900 mb-1">Total</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-900 font-bold">$</span>
+                <input
+                  type="text"
+                  value={total.toLocaleString('es-CL')}
+                  readOnly
+                  className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-md bg-slate-100 text-slate-900 font-bold cursor-not-allowed"
+                />
+              </div>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-bold text-slate-900 mb-1">Total</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-900 font-bold">$</span>
-              <input
-                type="text"
-                value={total.toLocaleString('es-CL')}
-                readOnly
-                className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-md bg-slate-100 text-slate-900 font-bold cursor-not-allowed"
-              />
+        )}
+
+        {type === 'venta' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div>
+              <label className="block text-sm font-medium text-blue-900 mb-1">Subtotal</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-700">$</span>
+                <input
+                  type="text"
+                  value={Number(netAmount).toLocaleString('es-CL')}
+                  readOnly
+                  className="w-full pl-7 pr-3 py-2 border border-blue-200 rounded-md bg-white text-blue-900 font-medium cursor-not-allowed"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-blue-900 mb-1">IVA (19%)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-700">$</span>
+                <input
+                  type="text"
+                  value={iva.toLocaleString('es-CL')}
+                  readOnly
+                  className="w-full pl-7 pr-3 py-2 border border-blue-200 rounded-md bg-white text-blue-900 font-medium cursor-not-allowed"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-blue-900 mb-1">Total a Cobrar</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-900 font-bold">$</span>
+                <input
+                  type="text"
+                  value={total.toLocaleString('es-CL')}
+                  readOnly
+                  className="w-full pl-7 pr-3 py-2 border border-blue-300 rounded-md bg-white text-blue-900 font-bold cursor-not-allowed"
+                />
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-slate-800 mb-1">Estado</label>

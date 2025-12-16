@@ -1,17 +1,20 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getInvoices, getFinancialSummary } from '@/app/actions/invoices'
+import { getInvoices, getFinancialSummary, deleteInvoice } from '@/app/actions/invoices'
 import Link from 'next/link'
-import { Plus, Search, FileText, ArrowUpRight, ArrowDownLeft, DollarSign, Eye } from 'lucide-react'
+import { Plus, Search, FileText, ArrowUpRight, ArrowDownLeft, DollarSign, Eye, Trash2 } from 'lucide-react'
 import { Invoice, FinancialSummary } from '@/types'
 import { InvoicePDFButton } from '@/components/InvoicePDFButton'
+import { ConfirmModal } from '@/components/ConfirmModal'
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [summary, setSummary] = useState<FinancialSummary>({ totalIncome: 0, totalExpenses: 0, balance: 0 })
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null)
 
   useEffect(() => {
     async function loadData() {
@@ -40,6 +43,32 @@ export default function InvoicesPage() {
     invoice.entidad.toLowerCase().includes(searchTerm.toLowerCase()) ||
     invoice.numero_factura.toString().includes(searchTerm)
   )
+
+  const handleDeleteClick = (invoice: Invoice) => {
+    setInvoiceToDelete(invoice)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!invoiceToDelete) return
+
+    setDeletingId(invoiceToDelete.id)
+    const result = await deleteInvoice(invoiceToDelete.id)
+    
+    if (result.success) {
+      // Actualizar la lista local
+      setInvoices(invoices.filter(inv => inv.id !== invoiceToDelete.id))
+      // Recargar el resumen
+      const summaryData = await getFinancialSummary()
+      if (summaryData) {
+        setSummary(summaryData)
+      }
+    } else {
+      alert('Error al eliminar la factura: ' + result.error)
+    }
+    
+    setDeletingId(null)
+    setInvoiceToDelete(null)
+  }
 
   if (isLoading) {
     return (
@@ -185,6 +214,14 @@ export default function InvoicesPage() {
                         {invoice.tipo === 'venta' && (
                           <InvoicePDFButton invoice={invoice} />
                         )}
+                        <button
+                          onClick={() => handleDeleteClick(invoice)}
+                          disabled={deletingId === invoice.id}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
+                          title="Eliminar factura"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -194,6 +231,18 @@ export default function InvoicesPage() {
           </table>
         </div>
       </div>
+
+      {/* Modal de confirmación */}
+      <ConfirmModal
+        isOpen={invoiceToDelete !== null}
+        onClose={() => setInvoiceToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Eliminar Factura"
+        message={invoiceToDelete ? `¿Estás seguro de eliminar la factura N° ${invoiceToDelete.numero_factura} de ${invoiceToDelete.entidad}?\n\nTipo: ${invoiceToDelete.tipo === 'venta' ? 'Venta' : 'Compra'}\nMonto: $${invoiceToDelete.monto_total.toLocaleString('es-CL')}\n\nEsta acción no se puede deshacer.` : ''}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        isDestructive={true}
+      />
     </div>
   )
 }

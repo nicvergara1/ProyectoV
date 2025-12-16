@@ -69,6 +69,24 @@ export async function createInvoice(formData: FormData) {
   return { success: true }
 }
 
+export async function deleteInvoice(id: string) {
+  const supabase = await createClient()
+  
+  const { error } = await supabase
+    .from('facturas')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error deleting invoice:', error)
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/dashboard/invoices')
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
 export async function getFinancialSummary(): Promise<FinancialSummary> {
   const { invoices } = await getInvoices()
   

@@ -99,6 +99,31 @@ export async function updateProductStock(id: number, newQuantity: number) {
   return { success: true }
 }
 
+export async function updateProduct(id: number, formData: FormData) {
+  const supabase = await createClient()
+  
+  const rawData = {
+    nombre: formData.get('nombre'),
+    descripcion: formData.get('descripcion'),
+    precio_unitario: Number(formData.get('precio_unitario')),
+    categoria: formData.get('categoria'),
+    stock_minimo: Number(formData.get('stock_minimo'))
+  }
+
+  const { error } = await supabase
+    .from('productos')
+    .update(rawData)
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error updating product:', error)
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/dashboard/inventory')
+  return { success: true }
+}
+
 export async function deleteProduct(id: number) {
   const supabase = await createClient()
   
@@ -212,4 +237,24 @@ export async function registerProductEntry(formData: FormData) {
 
   revalidatePath('/dashboard/inventory')
   return { success: true }
+}
+
+export async function getInventoryMovements() {
+  const supabase = await createClient()
+  
+  const { data, error } = await supabase
+    .from('movimientos_inventario')
+    .select(`
+      *,
+      producto:productos(nombre, categoria),
+      proyecto:proyectos(nombre)
+    `)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching movements:', error)
+    return { movements: [], error: error.message }
+  }
+
+  return { movements: data }
 }
