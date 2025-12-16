@@ -100,41 +100,7 @@ ADMIN_EMAIL=tu-email@ejemplo.com
 
 4. **Configurar Base de Datos**
 
-Ejecuta las migraciones SQL en el editor SQL de Supabase (en orden):
-
-```sql
--- 1. Convertir numero_factura a bigint
-ALTER TABLE facturas_compra 
-ALTER COLUMN numero_factura TYPE BIGINT USING numero_factura::bigint;
-
--- 2. Agregar user_id a facturas
-ALTER TABLE facturas_compra ADD COLUMN user_id UUID REFERENCES auth.users(id);
-
--- 3. Políticas RLS para acceso compartido
-DROP POLICY IF EXISTS "Usuarios autenticados pueden ver todas las facturas" ON facturas_compra;
-CREATE POLICY "Usuarios autenticados pueden ver todas las facturas"
-ON facturas_compra FOR SELECT TO authenticated USING (true);
-
--- 4. Crear tabla de mensajes de contacto
-CREATE TABLE mensajes_contacto (
-  id SERIAL PRIMARY KEY,
-  nombre TEXT NOT NULL,
-  email TEXT NOT NULL,
-  telefono TEXT,
-  asunto TEXT NOT NULL,
-  mensaje TEXT NOT NULL,
-  estado TEXT DEFAULT 'nuevo' CHECK (estado IN ('nuevo', 'leido', 'respondido')),
-  email_id TEXT,
-  notas TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 5. Validación de estado de proyectos
-ALTER TABLE proyectos ADD CONSTRAINT check_estado_fecha 
-CHECK (
-  estado != 'terminado' OR fecha_inicio <= CURRENT_DATE
-);
-```
+Ejecuta las migraciones de SQL que se encuentran en la carpeta de supabase/migrations en el editor SQL de Supabase
 
 5. **Iniciar servidor de desarrollo**
 ```bash
