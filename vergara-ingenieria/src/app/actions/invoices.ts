@@ -42,7 +42,7 @@ export async function createInvoice(formData: FormData) {
   
   const rawData = {
     tipo: formData.get('tipo'),
-    numero_factura: formData.get('numero_factura'),
+    numero_factura: Number(formData.get('numero_factura')),
     fecha_emision: formData.get('fecha_emision'),
     entidad: formData.get('entidad'),
     rut_entidad: formData.get('rut_entidad'),

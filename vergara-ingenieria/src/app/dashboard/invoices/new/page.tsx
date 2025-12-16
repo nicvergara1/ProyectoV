@@ -127,13 +127,32 @@ export default function NewInvoicePage() {
           <div>
             <label className="block text-sm font-medium text-slate-800 mb-1">Número de Factura</label>
             <input
-              type="text"
+              type="number"
               name="numero_factura"
               required
+              min="1"
+              max="999999"
+              step="1"
               value={numeroFactura}
-              onChange={(e) => setNumeroFactura(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                // Limitar a 6 dígitos
+                if (value.length <= 6) {
+                  setNumeroFactura(value)
+                }
+              }}
+              onKeyDown={(e) => {
+                // Evitar ingresar punto, coma, signo negativo o 'e'
+                if (['.', ',', '-', '+', 'e', 'E'].includes(e.key)) {
+                  e.preventDefault()
+                }
+                // Evitar más de 6 dígitos
+                if (numeroFactura.length >= 6 && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'Tab' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
+                  e.preventDefault()
+                }
+              }}
               className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-              placeholder="Ej: 12345"
+              placeholder="Ej: 12345 (máx. 6 dígitos)"
             />
           </div>
           <div>
@@ -142,8 +161,20 @@ export default function NewInvoicePage() {
               type="date"
               name="fecha_emision"
               required
+              max={new Date().toISOString().split('T')[0]}
               value={fechaEmision}
-              onChange={(e) => setFechaEmision(e.target.value)}
+              onChange={(e) => {
+                const selectedDate = new Date(e.target.value)
+                const today = new Date()
+                
+                // Verificar que no sea mayor al año actual
+                if (selectedDate <= today) {
+                  setFechaEmision(e.target.value)
+                } else {
+                  // Si es mayor, establecer la fecha de hoy
+                  setFechaEmision(new Date().toISOString().split('T')[0])
+                }
+              }}
               className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
             />
           </div>
@@ -171,9 +202,45 @@ export default function NewInvoicePage() {
               type="text"
               name="rut_entidad"
               value={rutEntidad}
-              onChange={(e) => setRutEntidad(e.target.value)}
+              onChange={(e) => {
+                let value = e.target.value.toUpperCase()
+                
+                // Remover todo excepto números y K
+                value = value.replace(/[^0-9K]/g, '')
+                
+                // Si hay K, debe estar solo al final
+                if (value.includes('K')) {
+                  const kIndex = value.indexOf('K')
+                  // Remover todas las K y agregar una al final si había alguna
+                  value = value.replace(/K/g, '')
+                  if (kIndex === value.length || value.length > 0) {
+                    value = value + 'K'
+                  }
+                }
+                
+                // Limitar a 9 caracteres (8 números + 1 dígito verificador)
+                if (value.length > 9) {
+                  value = value.substring(0, 9)
+                }
+                
+                // Formatear con puntos y guión
+                let formatted = value
+                if (value.length > 1) {
+                  // Separar cuerpo y dígito verificador
+                  const dv = value.slice(-1)
+                  let body = value.slice(0, -1)
+                  
+                  // Agregar puntos cada 3 dígitos de derecha a izquierda
+                  body = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+                  
+                  // Unir con guión
+                  formatted = body + '-' + dv
+                }
+                
+                setRutEntidad(formatted)
+              }}
               className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-              placeholder="Ej: 76.123.456-7"
+              placeholder="Ej: 12.345.678-9"
             />
           </div>
           <div>

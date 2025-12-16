@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Optimizaciones de compilación
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  // Optimizar imágenes
+  images: {
+    formats: ['image/avif', 'image/webp'],
+  },
   experimental: {
     serverActions: {
       allowedOrigins: ["cuddly-barnacle-6jggggqg5v62r7q5-3000.app.github.dev", "localhost:3000"],

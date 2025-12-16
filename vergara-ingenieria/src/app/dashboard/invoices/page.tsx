@@ -38,7 +38,7 @@ export default function InvoicesPage() {
 
   const filteredInvoices = invoices.filter(invoice => 
     invoice.entidad.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.numero_factura.includes(searchTerm)
+    invoice.numero_factura.toString().includes(searchTerm)
   )
 
   if (isLoading) {

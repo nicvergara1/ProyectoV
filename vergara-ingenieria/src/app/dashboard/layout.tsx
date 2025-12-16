@@ -5,7 +5,13 @@ import { LayoutDashboard, PieChart, Settings, LogOut, Zap, FileText, Menu, X, Ho
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import ChatbotBubble from '@/components/ChatbotBubble'
+import dynamic from 'next/dynamic'
+
+// Lazy load del chatbot para mejorar tiempo de carga inicial
+const ChatbotBubble = dynamic(() => import('@/components/ChatbotBubble'), {
+  ssr: false,
+  loading: () => null
+})
 
 export default function DashboardLayout({
   children,

@@ -15,6 +15,10 @@ interface ProjectFormProps {
 export function ProjectForm({ project, isEditing = false }: ProjectFormProps) {
   const router = useRouter()
   const [isPending, setIsPending] = useState(false)
+  const [fechaInicio, setFechaInicio] = useState(
+    project?.fecha_inicio ? new Date(project.fecha_inicio).toISOString().split('T')[0] : ''
+  )
+  const [estado, setEstado] = useState(project?.estado || 'sin_comenzar')
 
   async function handleSubmit(formData: FormData) {
     setIsPending(true)
@@ -92,7 +96,23 @@ export function ProjectForm({ project, isEditing = false }: ProjectFormProps) {
                 type="date"
                 name="fecha_inicio"
                 id="fecha_inicio"
-                defaultValue={project?.fecha_inicio ? new Date(project.fecha_inicio).toISOString().split('T')[0] : ''}
+                value={fechaInicio}
+                onChange={(e) => {
+                  const newFecha = e.target.value
+                  setFechaInicio(newFecha)
+                  
+                  // Si la fecha es futura y el estado es "terminado", cambiar a "activo"
+                  if (newFecha && estado === 'terminado') {
+                    const selectedDate = new Date(newFecha)
+                    const today = new Date()
+                    today.setHours(0, 0, 0, 0)
+                    
+                    if (selectedDate > today) {
+                      setEstado('activo')
+                      alert('Un proyecto con fecha futura no puede estar marcado como terminado. Se cambió el estado a "Activo".')
+                    }
+                  }
+                }}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -104,7 +124,24 @@ export function ProjectForm({ project, isEditing = false }: ProjectFormProps) {
               <select
                 name="estado"
                 id="estado"
-                defaultValue={project?.estado || 'sin_comenzar'}
+                value={estado}
+                onChange={(e) => {
+                  const newEstado = e.target.value as 'activo' | 'terminado' | 'sin_comenzar'
+                  
+                  // Validar si intenta marcar como terminado con fecha futura
+                  if (newEstado === 'terminado' && fechaInicio) {
+                    const selectedDate = new Date(fechaInicio)
+                    const today = new Date()
+                    today.setHours(0, 0, 0, 0)
+                    
+                    if (selectedDate > today) {
+                      alert('No se puede marcar como terminado un proyecto con fecha de inicio futura.')
+                      return
+                    }
+                  }
+                  
+                  setEstado(newEstado)
+                }}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="sin_comenzar">Sin comenzar</option>

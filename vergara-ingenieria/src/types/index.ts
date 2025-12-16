@@ -1,7 +1,7 @@
 export type Invoice = {
   id: string
   created_at: string
-  numero_factura: string
+  numero_factura: number
   fecha_emision: string
   entidad: string
   rut_entidad?: string
@@ -75,4 +75,16 @@ export type QuoteItem = {
   cantidad: number
   precio_unitario: number
   total: number
+}
+
+export type ContactMessage = {
+  id: number
+  created_at: string
+  nombre: string
+  email: string
+  telefono?: string
+  asunto: string
+  mensaje: string
+  estado: 'nuevo' | 'leido' | 'respondido'
+  notas?: string
 }

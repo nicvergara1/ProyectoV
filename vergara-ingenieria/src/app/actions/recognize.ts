@@ -2,15 +2,6 @@
 
 import OpenAI from 'openai'
 
-// Polyfill for DOMMatrix if it doesn't exist (needed for pdf-parse/pdfjs-dist in Node)
-if (typeof global.DOMMatrix === 'undefined') {
-  // @ts-ignore
-  global.DOMMatrix = class DOMMatrix {
-    a: number = 1; b: number = 0; c: number = 0; d: number = 1; e: number = 0; f: number = 0;
-    constructor() {}
-  }
-}
-
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
@@ -88,42 +79,23 @@ export async function analyzeInvoice(formData: FormData) {
     let content = ''
 
     if (file.type === 'application/pdf') {
-      // Handle PDF
-      try {
-        // Dynamic import to handle CJS/ESM interop
-        const pdfModule = await import('pdf-parse')
-        const pdf = pdfModule.default
-
-        if (typeof pdf !== 'function') {
-          throw new Error('No se pudo cargar la función pdf-parse correctamente.')
-        }
-
-        const pdfData = await pdf(buffer)
-        const text = pdfData.text
-
-        if (!text || text.trim().length === 0) {
-          throw new Error('El PDF no contiene texto seleccionable (posiblemente es una imagen escaneada).')
-        }
-
-        const response = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "user",
-              content: `Analiza el siguiente texto extraído de una factura o boleta chilena. Extrae los siguientes datos y devuélvelos en un objeto JSON (sin markdown): 'numero_factura' (string), 'fecha_emision' (string formato YYYY-MM-DD), 'entidad' (string, nombre del proveedor), 'rut_entidad' (string), 'direccion_entidad' (string), 'monto_neto' (number), 'iva' (number), 'monto_total' (number), 'descripcion' (string, resumen breve de la compra).
-              
-              Texto de la factura:
-              ${text}`
-            },
-          ],
-          max_tokens: 500,
-        });
-        content = response.choices[0].message.content || ''
-      } catch (pdfError: any) {
-        console.error('Error parsing PDF:', pdfError)
-        return { success: false, error: 'Error al leer el PDF: ' + (pdfError.message || 'Formato no válido') }
-      }
-
+      // For PDFs, extract text using unpdf (works in serverless environments)
+      const { extractText } = await import('unpdf')
+      const uint8Array = new Uint8Array(buffer)
+      const { text } = await extractText(uint8Array)
+      const pdfText = text
+      
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: `Analiza el siguiente texto extraído de una factura o boleta chilena. Extrae los siguientes datos y devuélvelos en un objeto JSON (sin markdown): 'numero_factura' (number, solo dígitos), 'fecha_emision' (string formato YYYY-MM-DD), 'entidad' (string, nombre del proveedor), 'rut_entidad' (string), 'direccion_entidad' (string), 'monto_neto' (number), 'iva' (number), 'monto_total' (number), 'descripcion' (string, resumen breve de la compra).\n\nTexto de la factura:\n${pdfText}`
+          },
+        ],
+        max_tokens: 500,
+      });
+      content = response.choices[0].message.content || ''
     } else {
       // Handle Image
       const base64Image = buffer.toString('base64')
@@ -137,7 +109,7 @@ export async function analyzeInvoice(formData: FormData) {
             content: [
               { 
                 type: "text", 
-                text: "Analiza esta imagen de una factura o boleta chilena. Extrae los siguientes datos y devuélvelos en un objeto JSON (sin markdown): 'numero_factura' (string), 'fecha_emision' (string formato YYYY-MM-DD), 'entidad' (string, nombre del proveedor), 'rut_entidad' (string), 'direccion_entidad' (string), 'monto_neto' (number), 'iva' (number), 'monto_total' (number), 'descripcion' (string, resumen breve de la compra)." 
+                text: "Analiza esta imagen de una factura o boleta chilena. Extrae los siguientes datos y devuélvelos en un objeto JSON (sin markdown): 'numero_factura' (number, solo dígitos), 'fecha_emision' (string formato YYYY-MM-DD), 'entidad' (string, nombre del proveedor), 'rut_entidad' (string), 'direccion_entidad' (string), 'monto_neto' (number), 'iva' (number), 'monto_total' (number), 'descripcion' (string, resumen breve de la compra)." 
               },
               {
                 type: "image_url",
@@ -163,7 +135,7 @@ export async function analyzeInvoice(formData: FormData) {
     return {
       success: true,
       data: {
-        numero_factura: data.numero_factura || "",
+        numero_factura: Number(data.numero_factura) || 0,
         fecha_emision: data.fecha_emision || new Date().toISOString().split('T')[0],
         entidad: data.entidad || "",
         rut_entidad: data.rut_entidad || "",

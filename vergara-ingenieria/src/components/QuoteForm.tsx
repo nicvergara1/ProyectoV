@@ -132,8 +132,8 @@ export function QuoteForm({ projects = [] }: QuoteFormProps) {
                 <input 
                   type="number" 
                   placeholder="Cant."
-                  value={item.cantidad}
-                  onChange={(e) => updateItem(index, 'cantidad', Number(e.target.value))}
+                  value={item.cantidad || ''}
+                  onChange={(e) => updateItem(index, 'cantidad', Number(e.target.value) || 0)}
                   required
                   min="1"
                   className="block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-slate-900" 
@@ -143,8 +143,8 @@ export function QuoteForm({ projects = [] }: QuoteFormProps) {
                 <input 
                   type="number" 
                   placeholder="Precio Unit."
-                  value={item.precio_unitario}
-                  onChange={(e) => updateItem(index, 'precio_unitario', Number(e.target.value))}
+                  value={item.precio_unitario || ''}
+                  onChange={(e) => updateItem(index, 'precio_unitario', Number(e.target.value) || 0)}
                   required
                   min="0"
                   className="block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-slate-900" 
