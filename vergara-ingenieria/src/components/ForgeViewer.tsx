@@ -7,6 +7,7 @@ declare global {
   interface Window {
     Autodesk?: any
     AutodeskViewingInitialized?: boolean
+    AutodeskViewingInitializationPromise?: Promise<void>
   }
 }
 
@@ -83,16 +84,27 @@ export default function ForgeViewer({ urn, onLoadComplete, onLoadError }: ForgeV
         setIsLoading(true)
         setError(null)
 
+        // Timeout de seguridad: si después de 30 segundos no carga, mostrar error
+        const loadingTimeout = setTimeout(() => {
+          console.error('[ForgeViewer] Timeout: la carga del modelo tomó más de 30 segundos')
+          setError('La carga del modelo está tomando demasiado tiempo. Por favor, intenta recargar la página.')
+          setIsLoading(false)
+        }, 30000)
+
         // Obtener access token
+        console.log('[ForgeViewer] Solicitando token de autenticación...')
         const tokenResponse = await fetch('/api/autodesk/token')
         if (!tokenResponse.ok) {
+          clearTimeout(loadingTimeout)
           throw new Error('No se pudo obtener el token de autenticación')
         }
         const tokenData = await tokenResponse.json()
         const accessToken = tokenData.access_token
+        console.log('[ForgeViewer] Token obtenido correctamente')
 
         // Función para obtener token (requerida por Autodesk Viewer)
         const getAccessToken = (callback: (token: string, expire: number) => void) => {
+          console.log('[ForgeViewer] Autodesk Viewer solicitando token')
           callback(accessToken, tokenData.expires_in || 3599)
         }
 
@@ -134,6 +146,7 @@ export default function ForgeViewer({ urn, onLoadComplete, onLoadError }: ForgeV
               // Cargar vista en el viewer
               viewer.loadDocumentNode(doc, defaultModel).then(() => {
                 console.log('[ForgeViewer] Modelo cargado correctamente')
+                clearTimeout(loadingTimeout)
 
                 // Habilitar extensiones
                 viewer.loadExtension('Autodesk.Measure')
@@ -144,6 +157,7 @@ export default function ForgeViewer({ urn, onLoadComplete, onLoadError }: ForgeV
                 }
               }).catch((loadError: any) => {
                 console.error('[ForgeViewer] Error cargando vista:', loadError)
+                clearTimeout(loadingTimeout)
                 setError('Error cargando la vista del modelo')
                 setIsLoading(false)
                 if (onLoadError) {
@@ -153,6 +167,7 @@ export default function ForgeViewer({ urn, onLoadComplete, onLoadError }: ForgeV
             },
             (docError: any) => {
               console.error('[ForgeViewer] Error cargando documento:', docError)
+              clearTimeout(loadingTimeout)
               setError('Error cargando el documento. Verifica que la traducción haya finalizado correctamente.')
               setIsLoading(false)
               if (onLoadError) {
@@ -162,17 +177,37 @@ export default function ForgeViewer({ urn, onLoadComplete, onLoadError }: ForgeV
           )
         }
 
-        // Inicializar Autodesk Viewing solo si no se ha hecho antes
-        if (!window.AutodeskViewingInitialized) {
-          console.log('[ForgeViewer] Inicializando Autodesk.Viewing por primera vez')
-          window.Autodesk.Viewing.Initializer(options, () => {
-            window.AutodeskViewingInitialized = true
-            createViewer()
-          })
-        } else {
-          console.log('[ForgeViewer] Autodesk.Viewing ya inicializado, creando viewer')
-          createViewer()
+        // Función helper para inicializar Autodesk.Viewing
+        const initAutodeskViewing = () => {
+          if (!window.AutodeskViewingInitializationPromise) {
+            console.log('[ForgeViewer] Inicializando Autodesk.Viewing por primera vez')
+
+            window.AutodeskViewingInitializationPromise = new Promise<void>((resolve, reject) => {
+              window.Autodesk.Viewing.Initializer(options, () => {
+                console.log('[ForgeViewer] Autodesk.Viewing.Initializer callback ejecutado')
+                window.AutodeskViewingInitialized = true
+                resolve()
+              })
+            })
+          }
+          return window.AutodeskViewingInitializationPromise
         }
+
+        // Esperar a que la inicialización complete antes de crear el viewer
+        initAutodeskViewing().then(() => {
+          console.log('[ForgeViewer] Autodesk.Viewing listo, creando viewer')
+          // Asegurar que el componente todavía está montado
+          if (viewerContainerRef.current) {
+            createViewer()
+          } else {
+            console.warn('[ForgeViewer] Componente desmontado antes de crear viewer')
+          }
+        }).catch((err) => {
+          console.error('[ForgeViewer] Error en inicialización de Autodesk.Viewing:', err)
+          clearTimeout(loadingTimeout)
+          setError('Error inicializando el visor de Autodesk')
+          setIsLoading(false)
+        })
 
       } catch (err: any) {
         console.error('[ForgeViewer] Error inicializando viewer:', err)
@@ -191,8 +226,12 @@ export default function ForgeViewer({ urn, onLoadComplete, onLoadError }: ForgeV
       if (viewerRef.current) {
         console.log('[ForgeViewer] Destruyendo viewer')
         try {
-          // Descargar todas las extensiones
-          viewerRef.current.unloadExtension('Autodesk.Measure')
+          // Descargar todas las extensiones (puede fallar si no están cargadas)
+          try {
+            viewerRef.current.unloadExtension('Autodesk.Measure')
+          } catch (e) {
+            // Ignorar si la extensión no estaba cargada
+          }
 
           // Terminar el viewer correctamente
           viewerRef.current.finish()
@@ -207,6 +246,8 @@ export default function ForgeViewer({ urn, onLoadComplete, onLoadError }: ForgeV
           viewerRef.current = null
         }
       }
+      // NOTA: NO resetear window.AutodeskViewingInitialized aquí
+      // porque queremos mantener la inicialización para futuros viewers
     }
   }, [isScriptLoaded, urn])
 
