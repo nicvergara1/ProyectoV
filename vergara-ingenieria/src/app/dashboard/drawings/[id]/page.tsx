@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Download, FileImage, AlertCircle, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Download, FileImage, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 import { getDrawing } from '@/app/actions/drawings'
 import { Drawing } from '@/types'
 import ForgeViewer from '@/components/ForgeViewer'
@@ -15,6 +15,7 @@ export default function DrawingViewerPage() {
   const [drawing, setDrawing] = useState<Drawing | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isInfoExpanded, setIsInfoExpanded] = useState(false)
 
   // Cargar dibujo
   const loadDrawing = async () => {
@@ -122,8 +123,8 @@ export default function DrawingViewerPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between gap-4 flex-shrink-0">
-        <div className="flex items-center gap-4 min-w-0">
+      <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-2 md:gap-4 flex-shrink-0">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0">
           <button
             onClick={() => router.back()}
             className="text-slate-600 hover:text-slate-900 transition-colors flex-shrink-0"
@@ -131,31 +132,55 @@ export default function DrawingViewerPage() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold text-slate-900 truncate">
+            <h1 className="text-base md:text-xl font-semibold text-slate-900 truncate">
               {drawing.nombre}
             </h1>
-            <p className="text-sm text-slate-500 truncate">
+            <p className="text-xs md:text-sm text-slate-500 truncate hidden sm:block">
               {drawing.nombre_original}
             </p>
           </div>
         </div>
-        {drawing.storage_url && (
-          <a
-            href={drawing.storage_url}
-            download={drawing.nombre_original}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex-shrink-0"
+        <div className="flex items-center gap-2">
+          {/* Botón de información en móvil */}
+          <button
+            onClick={() => setIsInfoExpanded(!isInfoExpanded)}
+            className="md:hidden flex items-center gap-1 px-2 py-1.5 bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200 transition-colors text-xs"
           >
-            <Download className="h-4 w-4" />
-            Descargar
-          </a>
-        )}
+            Info
+            {isInfoExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          </button>
+          {drawing.storage_url && (
+            <a
+              href={drawing.storage_url}
+              download={drawing.nombre_original}
+              className="flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs md:text-sm flex-shrink-0"
+            >
+              <Download className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Descargar</span>
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex min-h-0">
-        {/* Sidebar con metadatos */}
-        <div className="w-80 bg-white border-r border-slate-200 p-6 overflow-y-auto flex-shrink-0">
-          <h2 className="font-semibold text-slate-900 mb-4">Información del Plano</h2>
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+        {/* Sidebar con metadatos - Colapsable en móvil */}
+        <div className={`
+          w-full md:w-80 bg-white border-b md:border-b-0 md:border-r border-slate-200 
+          overflow-y-auto flex-shrink-0 transition-all duration-200
+          md:block
+          ${isInfoExpanded ? 'block max-h-[40vh]' : 'hidden md:block'}
+        `}>
+          <div className="p-4 md:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-slate-900">Información del Plano</h2>
+              <button
+                onClick={() => setIsInfoExpanded(false)}
+                className="md:hidden text-slate-400 hover:text-slate-600"
+              >
+                <ChevronUp className="h-4 w-4" />
+              </button>
+            </div>
 
           <div className="space-y-4 text-sm">
             {/* Estado */}
@@ -237,19 +262,20 @@ export default function DrawingViewerPage() {
           </div>
 
           {/* Ayuda */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="mt-6 p-3 md:p-4 bg-blue-50 border border-blue-200 rounded-md">
             <h3 className="font-medium text-blue-900 text-sm mb-2">Herramientas del Visor</h3>
             <ul className="text-xs text-blue-700 space-y-1">
-              <li>• Clic y arrastra para rotar</li>
-              <li>• Scroll para zoom</li>
-              <li>• Clic derecho y arrastra para pan</li>
-              <li>• Usa la barra superior para mediciones</li>
+              <li>• Clic/Touch y arrastra para rotar</li>
+              <li>• Scroll/Pinch para zoom</li>
+              <li>• <span className="hidden md:inline">Clic derecho</span><span className="md:hidden">Dos dedos</span> y arrastra para pan</li>
+              <li className="hidden md:block">• Usa la barra superior para mediciones</li>
             </ul>
+          </div>
           </div>
         </div>
 
         {/* Visor */}
-        <div className="flex-1 bg-slate-100 relative min-w-0">
+        <div className="flex-1 bg-slate-100 relative min-w-0 h-full">
           {drawing.estado === 'success' && drawing.urn ? (
             <ForgeViewer urn={drawing.urn} />
           ) : drawing.estado === 'processing' || drawing.estado === 'pending' ? (

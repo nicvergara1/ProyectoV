@@ -11,12 +11,23 @@ export default function ChatbotBubble() {
   const [hasMoved, setHasMoved] = useState(false);
   const bubbleRef = useRef<HTMLDivElement>(null);
 
-  // Establecer posición inicial
+  // Establecer posición inicial adaptativa
   useEffect(() => {
-    setPosition({
-      x: window.innerWidth - 100,
-      y: window.innerHeight - 100
-    });
+    const updatePosition = () => {
+      const isMobile = window.innerWidth < 768;
+      const margin = isMobile ? 40 : 100;
+      
+      setPosition({
+        x: window.innerWidth - margin,
+        y: window.innerHeight - margin
+      });
+    };
+
+    updatePosition();
+
+    // Actualizar posición al cambiar tamaño de ventana (ej: rotación en móvil)
+    window.addEventListener('resize', updatePosition);
+    return () => window.removeEventListener('resize', updatePosition);
   }, []);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -33,6 +44,20 @@ export default function ChatbotBubble() {
     });
   };
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLButtonElement>) => {
+    if (!position) return;
+    
+    e.stopPropagation();
+    
+    const touch = e.touches[0];
+    setIsDragging(true);
+    setHasMoved(false);
+    setDragOffset({
+      x: touch.clientX - position.x,
+      y: touch.clientY - position.y
+    });
+  };
+
   const handleMouseMove = (e: MouseEvent) => {
     if (!isDragging || !position) return;
     
@@ -41,8 +66,29 @@ export default function ChatbotBubble() {
     const newX = e.clientX - dragOffset.x;
     const newY = e.clientY - dragOffset.y;
     
-    // Limitar a los bordes de la ventana (con margen de 50px)
-    const margin = 50;
+    // Limitar a los bordes de la ventana (margen adaptativo)
+    const isMobile = window.innerWidth < 768;
+    const margin = isMobile ? 30 : 50;
+    const maxX = window.innerWidth - margin;
+    const maxY = window.innerHeight - margin;
+    
+    setPosition({
+      x: Math.max(margin, Math.min(newX, maxX)),
+      y: Math.max(margin, Math.min(newY, maxY))
+    });
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!isDragging || !position) return;
+    
+    setHasMoved(true);
+    
+    const touch = e.touches[0];
+    const newX = touch.clientX - dragOffset.x;
+    const newY = touch.clientY - dragOffset.y;
+    
+    // Limitar a los bordes de la ventana (margen adaptativo)
+    const margin = 30;
     const maxX = window.innerWidth - margin;
     const maxY = window.innerHeight - margin;
     
@@ -53,6 +99,10 @@ export default function ChatbotBubble() {
   };
 
   const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchEnd = () => {
     setIsDragging(false);
   };
 
@@ -67,10 +117,14 @@ export default function ChatbotBubble() {
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove);
+      document.addEventListener('touchend', handleTouchEnd);
       
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
       };
     }
   }, [isDragging, dragOffset, position]);
@@ -91,10 +145,12 @@ export default function ChatbotBubble() {
       {/* Chat Window */}
       <div 
         className={`
-          absolute bottom-16 right-0 w-[380px] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col 
+          absolute bottom-16 right-0 
+          w-[calc(100vw-40px)] max-w-[380px] 
+          bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col 
           transition-all duration-300 origin-bottom-right
           ${isOpen 
-            ? 'h-[600px] opacity-100 scale-100 pointer-events-auto' 
+            ? 'h-[calc(100vh-140px)] max-h-[600px] opacity-100 scale-100 pointer-events-auto' 
             : 'h-0 opacity-0 scale-95 pointer-events-none'
           }
         `}
@@ -126,9 +182,10 @@ export default function ChatbotBubble() {
       {/* Toggle Button */}
       <button
         onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
         onClick={handleClick}
         className={`
-          p-4 rounded-full shadow-xl transition-all duration-300 hover:scale-105 
+          p-3 md:p-4 rounded-full shadow-xl transition-all duration-300 hover:scale-105 
           focus:outline-none focus:ring-4 focus:ring-blue-200
           ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}
           ${isOpen 
@@ -138,7 +195,7 @@ export default function ChatbotBubble() {
         `}
         aria-label={isOpen ? "Cerrar chat" : "Abrir chat"}
       >
-        {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
+        {isOpen ? <X size={20} className="md:w-6 md:h-6" /> : <MessageCircle size={20} className="md:w-6 md:h-6" />}
       </button>
     </div>
   );

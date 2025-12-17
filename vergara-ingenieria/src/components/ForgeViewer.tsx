@@ -112,15 +112,32 @@ export default function ForgeViewer({ urn, onLoadComplete, onLoadError }: ForgeV
         const options = {
           env: 'AutodeskProduction2',
           api: 'streamingV2',
-          getAccessToken
+          getAccessToken,
+          // Opciones específicas para móvil
+          useADP: false, // Deshabilitar ADP para mejor compatibilidad móvil
+          useCookie: false // Evitar problemas de cookies en móviles
         }
 
         // Función para crear y cargar el viewer
         const createViewer = () => {
           if (!viewerContainerRef.current) return
 
-          // Crear instancia del viewer
-          const viewer = new window.Autodesk.Viewing.GuiViewer3D(viewerContainerRef.current)
+          // Crear instancia del viewer con opciones mobile-friendly
+          const viewer = new window.Autodesk.Viewing.GuiViewer3D(
+            viewerContainerRef.current,
+            {
+              // Configuración optimizada para móvil
+              disableTouchViewOrbit: false, // Permitir rotación con touch
+              disableTwoFingerSwipe: false, // Permitir pan con dos dedos
+              reverseMouseZoomDir: false,
+              reverseHorizontalLookDirection: false,
+              // Desactivar algunas características pesadas en móvil
+              ghosting: false,
+              groundShadow: false,
+              groundReflection: false,
+              envMapBackground: false
+            }
+          )
           viewerRef.current = viewer
 
           // Iniciar viewer
@@ -148,9 +165,17 @@ export default function ForgeViewer({ urn, onLoadComplete, onLoadError }: ForgeV
                 console.log('[ForgeViewer] Modelo cargado correctamente')
                 clearTimeout(loadingTimeout)
 
-                // Habilitar extensiones
-                viewer.loadExtension('Autodesk.Measure')
+                // Habilitar extensiones solo en desktop
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                if (!isMobile) {
+                  viewer.loadExtension('Autodesk.Measure').catch((err: any) => {
+                    console.warn('[ForgeViewer] No se pudo cargar extensión Measure:', err)
+                  })
+                }
 
+                // Ajustar visualización para el modelo
+                viewer.fitToView()
+                
                 setIsLoading(false)
                 if (onLoadComplete) {
                   onLoadComplete()
@@ -257,7 +282,10 @@ export default function ForgeViewer({ urn, onLoadComplete, onLoadError }: ForgeV
       {/* Contenedor del viewer */}
       <div
         ref={viewerContainerRef}
-        className="w-full h-full bg-slate-200"
+        className="absolute inset-0 w-full h-full bg-slate-200"
+        style={{
+          touchAction: 'none' // Prevenir zoom del navegador
+        }}
       />
 
       {/* Loading overlay */}
