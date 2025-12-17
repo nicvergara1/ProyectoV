@@ -95,3 +95,25 @@ export type ContactMessage = {
   estado: 'nuevo' | 'leido' | 'respondido'
   notas?: string
 }
+
+export type Drawing = {
+  id: number
+  created_at: string
+  nombre: string
+  nombre_original: string
+  tamano_bytes: number
+  descripcion?: string
+  storage_path: string
+  storage_url?: string
+  urn?: string
+  forge_bucket_key?: string
+  forge_object_key?: string
+  estado: 'uploading' | 'pending' | 'processing' | 'success' | 'failed'
+  estado_mensaje?: string
+  progreso: number
+  uploaded_at?: string
+  translation_started_at?: string
+  translation_completed_at?: string
+  proyecto_id?: number
+  user_id: string
+}

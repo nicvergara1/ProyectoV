@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { LayoutDashboard, PieChart, Settings, LogOut, Zap, FileText, Menu, X, Home, Package, History, User } from 'lucide-react'
+import { LayoutDashboard, PieChart, Settings, LogOut, Zap, FileText, Menu, X, Home, Package, History, User, FileImage } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
@@ -127,16 +127,24 @@ export default function DashboardLayout({
             <Zap className="h-5 w-5" />
             <span>Proyectos</span>
           </Link>
-          <Link 
-            href="/dashboard/quotes" 
+          <Link
+            href="/dashboard/quotes"
             onClick={() => setSidebarOpen(false)}
             className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-md transition-colors"
           >
             <FileText className="h-5 w-5" />
             <span>Cotizaciones</span>
           </Link>
-          <Link 
-            href="/dashboard/settings" 
+          <Link
+            href="/dashboard/drawings"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-md transition-colors"
+          >
+            <FileImage className="h-5 w-5" />
+            <span>Planos DWG</span>
+          </Link>
+          <Link
+            href="/dashboard/settings"
             onClick={() => setSidebarOpen(false)}
             className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-md transition-colors"
           >
