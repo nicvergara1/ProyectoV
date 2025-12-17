@@ -11,8 +11,8 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      allowedOrigins: ["cuddly-barnacle-6jggggqg5v62r7q5-3000.app.github.dev", "localhost:3000"],
-      bodySizeLimit: '10mb',
+      allowedOrigins: ["cuddly-barnacle-6jggggqg5v62r7q5-3000.app.github.dev", "localhost:3000", "localhost:3001"],
+      bodySizeLimit: '52mb', // Aumentado para archivos CAD (50MB + margen)
     },
   },
   async rewrites() {

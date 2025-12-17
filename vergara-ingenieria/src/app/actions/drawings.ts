@@ -47,7 +47,18 @@ export async function getDrawing(id: number) {
  * Sube un archivo DWG y lo procesa
  *
  * @param formData - Debe contener:
- *   - file: File (.dwg)
+/**
+ * Subir un archivo CAD a Autodesk Platform Services
+ * 
+ * Flujo:
+ * 1. Subir archivo a Supabase Storage
+ * 2. Crear registro en tabla dibujos
+ * 3. Subir a Autodesk OSS Bucket
+ * 4. Iniciar traducción a SVF2
+ * 5. Actualizar registro con URN
+ * 
+ * @param formData - FormData con:
+ *   - file: File (DWG, DWF, DXF, RVT, SKP, STEP, IFC, etc.)
  *   - descripcion?: string (opcional)
  *   - proyecto_id?: number (opcional)
  */
@@ -64,9 +75,29 @@ export async function uploadDrawing(formData: FormData) {
       return { success: false, error: 'No se proporcionó ningún archivo' }
     }
 
-    // 2. Validar archivo
-    if (!file.name.toLowerCase().endsWith('.dwg')) {
-      return { success: false, error: 'Solo se permiten archivos .dwg' }
+    // 2. Validar archivo - Formatos CAD soportados
+    const SUPPORTED_FORMATS = [
+      // AutoCAD
+      '.dwg', '.dwf', '.dxf',
+      // Autodesk
+      '.rvt', '.rfa', '.rte', '.nwd', '.nwc', '.ipt', '.iam', '.idw', '.f3d',
+      // Otros CAD
+      '.sldprt', '.sldasm', '.slddrw', '.skp', '.step', '.stp', '.iges', '.igs',
+      '.sat', '.catpart', '.catproduct',
+      // 3D Genéricos
+      '.obj', '.stl', '.fbx', '.3ds', '.dae',
+      // BIM
+      '.ifc'
+    ];
+
+    const fileName = file.name.toLowerCase();
+    const isSupported = SUPPORTED_FORMATS.some(format => fileName.endsWith(format));
+    
+    if (!isSupported) {
+      return { 
+        success: false, 
+        error: `Formato no soportado. Formatos permitidos: ${SUPPORTED_FORMATS.join(', ')}` 
+      };
     }
 
     const maxSize = 50 * 1024 * 1024 // 50MB
@@ -121,10 +152,13 @@ export async function uploadDrawing(formData: FormData) {
     const storageUrl = urlData.signedUrl
 
     // 6. Insertar en base de datos
+    // Extraer nombre sin extensión
+    const fileNameWithoutExt = sanitizedFileName.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
+    
     const { data: dibujoData, error: dbError } = await supabase
       .from('dibujos')
       .insert({
-        nombre: sanitizedFileName.replace('.dwg', '').replace(/_/g, ' '),
+        nombre: fileNameWithoutExt,
         nombre_original: file.name,
         tamano_bytes: file.size,
         descripcion: descripcion || null,

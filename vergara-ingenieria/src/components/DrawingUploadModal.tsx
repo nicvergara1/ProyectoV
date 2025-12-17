@@ -31,10 +31,28 @@ export default function DrawingUploadModal({
 
   const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
+  // Formatos CAD soportados
+  const SUPPORTED_FORMATS = [
+    // AutoCAD
+    '.dwg', '.dwf', '.dxf',
+    // Autodesk
+    '.rvt', '.rfa', '.rte', '.nwd', '.nwc', '.ipt', '.iam', '.idw', '.f3d',
+    // Otros CAD
+    '.sldprt', '.sldasm', '.slddrw', '.skp', '.step', '.stp', '.iges', '.igs',
+    '.sat', '.catpart', '.catproduct',
+    // 3D Genéricos
+    '.obj', '.stl', '.fbx', '.3ds', '.dae',
+    // BIM
+    '.ifc'
+  ];
+
   // Validar archivo
   const validateFile = (file: File): string | null => {
-    if (!file.name.toLowerCase().endsWith('.dwg')) {
-      return 'Solo se permiten archivos .dwg'
+    const fileName = file.name.toLowerCase();
+    const isSupported = SUPPORTED_FORMATS.some(format => fileName.endsWith(format));
+    
+    if (!isSupported) {
+      return `Formato no soportado. Formatos permitidos: ${SUPPORTED_FORMATS.join(', ')}`;
     }
 
     if (file.size > MAX_FILE_SIZE) {
@@ -157,7 +175,7 @@ export default function DrawingUploadModal({
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
-          <h2 className="text-xl font-semibold text-slate-900">Subir Plano DWG</h2>
+          <h2 className="text-xl font-semibold text-slate-900">Subir Archivo CAD</h2>
           <button
             onClick={handleClose}
             disabled={isUploading}
@@ -172,7 +190,7 @@ export default function DrawingUploadModal({
           {/* Drag & Drop Zone */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              Archivo DWG <span className="text-red-500">*</span>
+              Archivo CAD <span className="text-red-500">*</span>
             </label>
             <div
               onDragOver={handleDragOver}
@@ -188,7 +206,7 @@ export default function DrawingUploadModal({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".dwg"
+                accept=".dwg,.dwf,.dxf,.rvt,.rfa,.rte,.nwd,.nwc,.ipt,.iam,.idw,.f3d,.sldprt,.sldasm,.slddrw,.skp,.step,.stp,.iges,.igs,.sat,.catpart,.catproduct,.obj,.stl,.fbx,.3ds,.dae,.ifc"
                 onChange={handleInputChange}
                 className="hidden"
                 disabled={isUploading}
@@ -218,10 +236,10 @@ export default function DrawingUploadModal({
                   <Upload className="h-12 w-12 text-slate-400 mx-auto" />
                   <div>
                     <p className="text-slate-700 font-medium">
-                      Arrastra un archivo DWG aquí
+                      Arrastra un archivo CAD aquí
                     </p>
                     <p className="text-sm text-slate-500 mt-1">
-                      o haz clic para seleccionar (máx. 50MB)
+                      DWG, DWF, DXF, RVT, SKP, STEP, IFC y más (máx. 50MB)
                     </p>
                   </div>
                 </div>
@@ -315,7 +333,7 @@ export default function DrawingUploadModal({
               ) : (
                 <>
                   <Upload className="h-4 w-4" />
-                  <span>Subir Plano</span>
+                  <span>Subir Archivo</span>
                 </>
               )}
             </button>

@@ -152,9 +152,9 @@ export default function DrawingsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Planos DWG</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Archivos CAD</h1>
           <p className="text-slate-600 mt-1">
-            Gestiona y visualiza tus archivos de AutoCAD
+            Gestiona y visualiza tus planos DWG, Revit, SketchUp y más
           </p>
         </div>
         <button
@@ -162,7 +162,7 @@ export default function DrawingsPage() {
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm"
         >
           <Plus className="h-5 w-5" />
-          Subir Plano
+          Subir Archivo
         </button>
       </div>
 
@@ -174,7 +174,7 @@ export default function DrawingsPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
             <input
               type="text"
-              placeholder="Buscar planos..."
+              placeholder="Buscar archivos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -209,14 +209,14 @@ export default function DrawingsPage() {
           <FileImage className="h-16 w-16 text-slate-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-slate-900 mb-2">
             {searchTerm || filterEstado !== 'all'
-              ? 'No se encontraron planos'
-              : 'No tienes planos DWG'
+              ? 'No se encontraron archivos'
+              : 'No tienes archivos CAD'
             }
           </h3>
           <p className="text-slate-600 mb-4">
             {searchTerm || filterEstado !== 'all'
               ? 'Intenta ajustar los filtros de búsqueda'
-              : 'Comienza subiendo tu primer archivo DWG'
+              : 'Comienza subiendo tu primer archivo CAD'
             }
           </p>
           {!searchTerm && filterEstado === 'all' && (
@@ -225,7 +225,7 @@ export default function DrawingsPage() {
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               <Plus className="h-5 w-5" />
-              Subir Primer Plano
+              Subir Primer Archivo
             </button>
           )}
         </div>
