@@ -14,9 +14,12 @@ import { getApsToken } from '../token/route'
  *  - fileName: string - Nombre del archivo
  */
 export async function POST(request: NextRequest) {
+  let drawingId: number | null = null
+  
   try {
     const body = await request.json()
-    const { drawingId, storageUrl, fileName } = body
+    const { drawingId: id, storageUrl, fileName } = body
+    drawingId = id
 
     if (!drawingId || !storageUrl || !fileName) {
       return NextResponse.json(
@@ -235,6 +238,24 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('[APS Upload] Error:', error)
+    
+    // Intentar actualizar el estado a failed en la BD
+    if (drawingId) {
+      try {
+        const supabase = createServiceClient()
+        await supabase
+          .from('dibujos')
+          .update({
+            estado: 'failed',
+            estado_mensaje: error.message || 'Error desconocido',
+            progreso: 0
+          })
+          .eq('id', drawingId)
+      } catch (updateError) {
+        console.error('[APS Upload] Error actualizando estado a failed:', updateError)
+      }
+    }
+    
     return NextResponse.json(
       {
         error: 'Internal server error',

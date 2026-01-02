@@ -184,12 +184,15 @@ export async function uploadDrawing(formData: FormData) {
 
     // 7. Iniciar proceso de traducción en Autodesk (async, no bloquear respuesta)
     if (storageUrl) {
-      // Llamar a la API route de upload (fire and forget)
-      // Usar URL absoluta construida dinámicamente para funcionar en producción
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                      (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+      // Llamar directamente a la API usando fetch interno del servidor
+      // No usar NEXT_PUBLIC_APP_URL porque estamos en el servidor
+      const apiUrl = process.env.NEXT_PUBLIC_APP_URL 
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/autodesk/upload`
+        : `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/autodesk/upload`
       
-      fetch(`${baseUrl}/api/autodesk/upload`, {
+      console.log('[Upload Drawing] Llamando a API de Autodesk:', apiUrl)
+      
+      fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -197,14 +200,33 @@ export async function uploadDrawing(formData: FormData) {
           storageUrl,
           fileName: sanitizedFileName
         })
-      }).then(response => {
+      }).then(async response => {
         if (!response.ok) {
-          console.error('[Upload Drawing] Error respuesta API Autodesk:', response.status)
+          const errorText = await response.text()
+          console.error('[Upload Drawing] Error respuesta API Autodesk:', response.status, errorText)
+          // Actualizar estado a failed si la API falla
+          await supabase
+            .from('dibujos')
+            .update({
+              estado: 'failed',
+              estado_mensaje: `Error en API: ${response.status}`,
+              progreso: 0
+            })
+            .eq('id', drawingId)
         } else {
-          console.log('[Upload Drawing] Proceso de traducción iniciado en background exitosamente')
+          console.log('[Upload Drawing] Proceso de traducción iniciado exitosamente')
         }
-      }).catch(error => {
+      }).catch(async error => {
         console.error('[Upload Drawing] Error iniciando proceso Autodesk:', error)
+        // Actualizar estado a failed si hay error de red
+        await supabase
+          .from('dibujos')
+          .update({
+            estado: 'failed',
+            estado_mensaje: `Error de conexión: ${error.message}`,
+            progreso: 0
+          })
+          .eq('id', drawingId)
       })
 
       console.log('[Upload Drawing] Solicitud de traducción enviada')
