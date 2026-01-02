@@ -185,7 +185,11 @@ export async function uploadDrawing(formData: FormData) {
     // 7. Iniciar proceso de traducción en Autodesk (async, no bloquear respuesta)
     if (storageUrl) {
       // Llamar a la API route de upload (fire and forget)
-      fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/autodesk/upload`, {
+      // Usar URL absoluta construida dinámicamente para funcionar en producción
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                      (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+      
+      fetch(`${baseUrl}/api/autodesk/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -193,11 +197,17 @@ export async function uploadDrawing(formData: FormData) {
           storageUrl,
           fileName: sanitizedFileName
         })
+      }).then(response => {
+        if (!response.ok) {
+          console.error('[Upload Drawing] Error respuesta API Autodesk:', response.status)
+        } else {
+          console.log('[Upload Drawing] Proceso de traducción iniciado en background exitosamente')
+        }
       }).catch(error => {
         console.error('[Upload Drawing] Error iniciando proceso Autodesk:', error)
       })
 
-      console.log('[Upload Drawing] Proceso de traducción iniciado en background')
+      console.log('[Upload Drawing] Solicitud de traducción enviada')
     }
 
     // 8. Revalidar cache

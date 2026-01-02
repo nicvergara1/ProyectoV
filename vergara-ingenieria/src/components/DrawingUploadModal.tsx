@@ -119,8 +119,11 @@ export default function DrawingUploadModal({
     try {
       // Simular progreso (el upload real es muy rápido)
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90))
-      }, 200)
+        setUploadProgress(prev => {
+          if (prev >= 85) return prev // Pausar en 85% hasta que termine
+          return prev + 15
+        })
+      }, 300)
 
       const formData = new FormData()
       formData.append('file', selectedFile)
@@ -130,14 +133,18 @@ export default function DrawingUploadModal({
       const result = await uploadDrawing(formData)
 
       clearInterval(progressInterval)
-      setUploadProgress(100)
 
       if (result.success) {
-        // Éxito
+        // Completar progreso gradualmente para mejor UX
+        setUploadProgress(95)
+        await new Promise(resolve => setTimeout(resolve, 200))
+        setUploadProgress(100)
+        
+        // Mantener modal abierto 1.5s para que el usuario vea el 100%
         setTimeout(() => {
           if (onSuccess) onSuccess()
           handleClose()
-        }, 500)
+        }, 1500)
       } else {
         setError(result.error || 'Error al subir el archivo')
         setUploadProgress(0)
@@ -297,16 +304,27 @@ export default function DrawingUploadModal({
           {/* Progress Bar */}
           {isUploading && (
             <div>
-              <div className="flex justify-between text-sm text-slate-600 mb-2">
-                <span>Subiendo archivo...</span>
-                <span>{uploadProgress}%</span>
+              <div className="flex justify-between text-sm mb-2">
+                <span className={uploadProgress === 100 ? "text-green-600 font-medium" : "text-slate-600"}>
+                  {uploadProgress === 100 ? "✓ Archivo subido correctamente" : "Subiendo archivo..."}
+                </span>
+                <span className={uploadProgress === 100 ? "text-green-600 font-medium" : "text-slate-600"}>
+                  {uploadProgress}%
+                </span>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
                 <div
-                  className="h-full bg-blue-600 transition-all duration-300 ease-out"
+                  className={`h-full transition-all duration-500 ease-out ${
+                    uploadProgress === 100 ? "bg-green-500" : "bg-blue-600"
+                  }`}
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
+              {uploadProgress === 100 && (
+                <p className="text-xs text-slate-500 mt-2">
+                  La traducción 3D se procesará en segundo plano
+                </p>
+              )}
             </div>
           )}
 

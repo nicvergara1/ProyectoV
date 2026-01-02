@@ -93,16 +93,64 @@ export async function GET() {
 
 /**
  * Helper function para obtener token (usado por otras API routes)
+ * Esta función obtiene el token directamente sin hacer HTTP request
  *
  * @returns Promise<string> - Access token
  */
 export async function getApsToken(): Promise<string> {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/autodesk/token`)
+  try {
+    const now = Date.now()
 
-  if (!response.ok) {
-    throw new Error('Failed to get APS token')
+    // Verificar si hay un token cacheado válido
+    if (cachedToken && cachedToken.expiresAt > now + TOKEN_EXPIRY_BUFFER) {
+      console.log('[APS Token Helper] Usando token cacheado')
+      return cachedToken.token
+    }
+
+    // Si no hay token válido, obtener uno nuevo de Autodesk
+    console.log('[APS Token Helper] Obteniendo nuevo token de Autodesk')
+
+    const clientId = process.env.APS_CLIENT_ID
+    const clientSecret = process.env.APS_CLIENT_SECRET
+
+    if (!clientId || !clientSecret) {
+      throw new Error('APS_CLIENT_ID y APS_CLIENT_SECRET deben estar configurados')
+    }
+
+    // Hacer request a Autodesk para obtener token
+    const response = await fetch('https://developer.api.autodesk.com/authentication/v2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: 'client_credentials',
+        scope: 'data:read data:write data:create bucket:create bucket:read'
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[APS Token Helper] Error de Autodesk:', errorText)
+      throw new Error(`Autodesk authentication failed: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    // Cachear el token
+    cachedToken = {
+      token: data.access_token,
+      expiresAt: now + (data.expires_in * 1000) // convertir segundos a ms
+    }
+
+    console.log('[APS Token Helper] Nuevo token obtenido y cacheado')
+
+    return data.access_token
+
+  } catch (error: any) {
+    console.error('[APS Token Helper] Error:', error)
+    throw new Error(`Failed to get APS token: ${error.message}`)
   }
-
-  const data = await response.json()
-  return data.access_token
 }
