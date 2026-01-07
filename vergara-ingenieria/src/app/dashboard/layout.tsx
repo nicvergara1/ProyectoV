@@ -1,10 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { LayoutDashboard, PieChart, Settings, LogOut, Zap, FileText, Menu, X, Home, Package, History, User, FileImage } from 'lucide-react'
+import { LayoutDashboard, PieChart, Settings, LogOut, Zap, FileText, Menu, X, Home, Package, History, User, FileImage, Sheet, Moon, Sun } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
+import { useTheme } from '@/contexts/ThemeContext'
+import { PWAInstaller } from '@/components/PWAInstaller'
 import dynamic from 'next/dynamic'
 
 // Lazy load del chatbot para mejorar tiempo de carga inicial
@@ -24,6 +26,11 @@ export default function DashboardLayout({
   const [userInitial, setUserInitial] = useState<string>('U')
   const router = useRouter()
   const supabase = createClient()
+  const { theme, setTheme } = useTheme()
+
+  const toggleTheme = () => {
+    setTheme(theme === 'light' ? 'dark' : 'light')
+  }
 
   useEffect(() => {
     const checkUser = async () => {
@@ -77,7 +84,7 @@ export default function DashboardLayout({
         <div className="p-6 flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-2">
             <Zap className="h-6 w-6 text-blue-500" />
-            <span className="text-lg font-bold">Vergara Ing.</span>
+            <span className="text-lg font-bold tracking-tight">Vergara Ing.</span>
           </div>
           <button 
             onClick={() => setSidebarOpen(false)}
@@ -94,14 +101,6 @@ export default function DashboardLayout({
           >
             <LayoutDashboard className="h-5 w-5" />
             <span>Resumen</span>
-          </Link>
-          <Link 
-            href="/dashboard/invoices" 
-            onClick={() => setSidebarOpen(false)}
-            className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-md transition-colors"
-          >
-            <FileText className="h-5 w-5" />
-            <span>Facturas</span>
           </Link>
           <Link 
             href="/dashboard/inventory" 
@@ -144,6 +143,14 @@ export default function DashboardLayout({
             <span>Planos DWG</span>
           </Link>
           <Link
+            href="/dashboard/documentos"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-md transition-colors"
+          >
+            <Sheet className="h-5 w-5" />
+            <span>Documentos</span>
+          </Link>
+          <Link
             href="/dashboard/settings"
             onClick={() => setSidebarOpen(false)}
             className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-md transition-colors"
@@ -180,9 +187,20 @@ export default function DashboardLayout({
             >
               <Menu className="h-6 w-6" />
             </button>
-            <h1 className="text-xl font-semibold text-slate-800">Panel de Control</h1>
+            <h1 className="text-xl font-bold text-slate-800 tracking-tight">Panel de Control</h1>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-600 hover:text-slate-900"
+              title={theme === 'light' ? 'Activar modo oscuro' : 'Activar modo claro'}
+            >
+              {theme === 'light' ? (
+                <Moon className="h-5 w-5" />
+              ) : (
+                <Sun className="h-5 w-5" />
+              )}
+            </button>
             <Link 
               href="/dashboard/settings"
               className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors group"
@@ -201,6 +219,7 @@ export default function DashboardLayout({
         </main>
       </div>
       <ChatbotBubble />
+      <PWAInstaller />
     </div>
   )
 }

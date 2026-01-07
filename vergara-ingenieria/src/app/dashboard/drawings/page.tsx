@@ -152,18 +152,27 @@ export default function DrawingsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Archivos CAD</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Planos y Diagramas</h1>
           <p className="text-slate-600 mt-1">
-            Gestiona y visualiza tus planos DWG, Revit, SketchUp y más
+            Gestiona y visualiza archivos DWG, Revit, SketchUp y crea diagramas eléctricos
           </p>
         </div>
-        <button
-          onClick={() => setIsUploadModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          <Plus className="h-5 w-5" />
-          Subir Archivo
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => router.push('/dashboard/drawings/new-diagram')}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Nuevo Diagrama
+          </button>
+          <button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <Plus className="h-5 w-5" />
+            Subir Archivo
+          </button>
+        </div>
       </div>
 
       {/* Filtros y búsqueda */}

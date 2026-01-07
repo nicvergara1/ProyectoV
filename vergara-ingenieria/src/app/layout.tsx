@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,6 +26,13 @@ export const metadata: Metadata = {
     maximumScale: 5,
     userScalable: true,
   },
+  manifest: '/manifest.json',
+  themeColor: '#3b82f6',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Vergara Ing'
+  }
 };
 
 export default function RootLayout({
@@ -34,11 +42,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Vergara Ing" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        {children}
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

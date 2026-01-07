@@ -6,6 +6,8 @@ import { ArrowLeft, Download, FileImage, AlertCircle, RefreshCw, ChevronDown, Ch
 import { getDrawing } from '@/app/actions/drawings'
 import { Drawing } from '@/types'
 import ForgeViewer from '@/components/ForgeViewer'
+import DiagramEditor from '@/components/DiagramEditor'
+import { createClient } from '@/utils/supabase/client'
 
 export default function DrawingViewerPage() {
   const router = useRouter()
@@ -16,6 +18,8 @@ export default function DrawingViewerPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isInfoExpanded, setIsInfoExpanded] = useState(false)
+  const [diagramData, setDiagramData] = useState<any>(null)
+  const [isJsonDiagram, setIsJsonDiagram] = useState(false)
 
   // Cargar dibujo
   const loadDrawing = async () => {
@@ -31,6 +35,21 @@ export default function DrawingViewerPage() {
     }
 
     setDrawing(data)
+    
+    // Verificar si es un diagrama JSON (sin URN)
+    if (!data.urn && data.storage_url) {
+      setIsJsonDiagram(true)
+      // Cargar el archivo JSON
+      try {
+        const response = await fetch(data.storage_url)
+        const jsonData = await response.json()
+        setDiagramData(jsonData)
+      } catch (err) {
+        console.error('Error loading diagram JSON:', err)
+        setError('Error al cargar el diagrama')
+      }
+    }
+    
     setIsLoading(false)
   }
 
@@ -217,6 +236,16 @@ export default function DrawingViewerPage() {
               <p className="text-slate-900">{formatBytes(drawing.tamano_bytes)}</p>
             </div>
 
+            {/* Tipo de archivo */}
+            {isJsonDiagram && (
+              <div>
+                <label className="text-slate-500 block mb-1">Tipo</label>
+                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                  Diagrama Eléctrico (JSON)
+                </span>
+              </div>
+            )}
+
             {/* Fecha de carga */}
             <div>
               <label className="text-slate-500 block mb-1">Subido el</label>
@@ -276,7 +305,13 @@ export default function DrawingViewerPage() {
 
         {/* Visor */}
         <div className="flex-1 bg-slate-100 relative min-w-0 h-full">
-          {drawing.estado === 'success' && drawing.urn ? (
+          {isJsonDiagram && diagramData ? (
+            // Mostrar editor de diagramas en modo visualización
+            <DiagramEditor
+              title={drawing.nombre}
+              initialData={diagramData}
+            />
+          ) : drawing.estado === 'success' && drawing.urn ? (
             <ForgeViewer urn={drawing.urn} />
           ) : drawing.estado === 'processing' || drawing.estado === 'pending' ? (
             <div className="flex items-center justify-center h-full">

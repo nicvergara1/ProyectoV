@@ -4,13 +4,7 @@ import { ArrowLeft, Calendar, Mail, User, FileText } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { QuoteExportButton } from '@/components/QuoteExportButton'
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('es-CL', {
-    style: 'currency',
-    currency: 'CLP'
-  }).format(amount)
-}
+import { formatCurrency } from '@/lib/formatters'
 
 export default async function QuoteDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

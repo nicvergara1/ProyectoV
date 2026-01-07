@@ -43,3 +43,7 @@ nul
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# markdown files
+*.md
+!README.md

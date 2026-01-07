@@ -1,159 +1,135 @@
-import { DollarSign, TrendingUp, TrendingDown, Activity, Plus, FileText, Package, AlertTriangle } from 'lucide-react'
-import { getInvoices, getFinancialSummary } from '@/app/actions/invoices'
+import { DollarSign, Package, AlertTriangle, TrendingUp, ArrowUpRight } from 'lucide-react'
 import { getProducts } from '@/app/actions/inventory'
-import { cn } from '@/lib/utils'
 import Link from 'next/link'
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('es-CL', {
-    style: 'currency',
-    currency: 'CLP'
-  }).format(amount)
-}
+import { StatsCard } from '@/components/dashboard/StatsCard'
 
 export default async function Dashboard() {
-  const summary = await getFinancialSummary()
-  const { invoices } = await getInvoices()
   const { products } = await getProducts()
-  
-  // Get only the 5 most recent invoices
-  const recentInvoices = invoices ? invoices.slice(0, 5) : []
   
   // Calculate low stock items
   const lowStockItems = (products || []).filter(p => p.cantidad <= p.stock_minimo)
+  
+  // Calculate inventory statistics
+  const totalProducts = products?.length || 0
+  const totalValue = products?.reduce((sum, p) => sum + (p.precio_unitario * p.cantidad), 0) || 0
+
+  const stats = [
+    {
+      title: "Total Productos",
+      value: totalProducts.toString(),
+      iconName: "Package" as const,
+      gradient: "from-blue-500 to-cyan-500",
+      bgColor: "bg-blue-50",
+      iconColor: "text-blue-600",
+      description: "Items en inventario",
+      trend: "+12%",
+      trendUp: true
+    },
+    {
+      title: "Valor Total",
+      value: `$${totalValue.toLocaleString('es-CL')}`,
+      iconName: "DollarSign" as const,
+      gradient: "from-green-500 to-emerald-500",
+      bgColor: "bg-green-50",
+      iconColor: "text-green-600",
+      description: "Valor del inventario",
+      trend: "+8%",
+      trendUp: true
+    },
+    {
+      title: "Stock Bajo",
+      value: lowStockItems.length.toString(),
+      iconName: "AlertTriangle" as const,
+      gradient: lowStockItems.length > 0 ? "from-yellow-500 to-orange-500" : "from-green-500 to-emerald-500",
+      bgColor: lowStockItems.length > 0 ? "bg-yellow-50" : "bg-green-50",
+      iconColor: lowStockItems.length > 0 ? "text-yellow-600" : "text-green-600",
+      description: "Productos por reponer",
+      trend: lowStockItems.length > 0 ? "Acción requerida" : "Todo bien",
+      trendUp: lowStockItems.length === 0
+    }
+  ]
 
   return (
-    <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-slate-600 text-sm font-medium">Ventas Totales</h3>
-            <DollarSign className="h-5 w-5 text-green-500" />
+    <div className="space-y-8">
+      {/* Welcome Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl p-8 text-white shadow-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2 tracking-tight">Bienvenido al Dashboard</h1>
+            <p className="text-blue-100 font-medium">Aquí tienes un resumen de tu inventario y estadísticas</p>
           </div>
-          <p className="text-3xl font-bold text-slate-900">{formatCurrency(summary.totalIncome)}</p>
-          <div className="flex items-center mt-2 text-sm text-green-600">
-            <TrendingUp className="h-4 w-4 mr-1" />
-            <span>Ingresos por Facturas</span>
-          </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-slate-600 text-sm font-medium">Compras Totales</h3>
-            <Activity className="h-5 w-5 text-red-500" />
-          </div>
-          <p className="text-3xl font-bold text-slate-900">{formatCurrency(summary.totalExpenses)}</p>
-          <div className="flex items-center mt-2 text-sm text-red-600">
-            <TrendingDown className="h-4 w-4 mr-1" />
-            <span>Gastos por Facturas</span>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-slate-600 text-sm font-medium">Balance</h3>
-            <DollarSign className="h-5 w-5 text-blue-500" />
-          </div>
-          <p className={`text-3xl font-bold ${summary.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {formatCurrency(summary.balance)}
-          </p>
-          <div className="flex items-center mt-2 text-sm text-slate-600">
-            <FileText className="h-4 w-4 mr-1" />
-            <span>Neto (Ventas - Compras)</span>
-          </div>
-        </div>
-
-        {/* Inventory Alert Card */}
-        {lowStockItems.length > 0 && (
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 md:col-span-3 border-l-4 border-l-yellow-500">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-100 rounded-full">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                </div>
-                <div>
-                  <h3 className="text-slate-900 font-bold">Alerta de Inventario</h3>
-                  <p className="text-slate-600 text-sm">
-                    Tienes {lowStockItems.length} productos con stock bajo.
-                  </p>
-                </div>
-              </div>
-              <Link 
-                href="/dashboard/inventory"
-                className="text-sm font-medium text-blue-600 hover:text-blue-800"
-              >
-                Ver Inventario &rarr;
-              </Link>
+          <div className="hidden md:block">
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4">
+              <TrendingUp className="h-12 w-12" />
             </div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Recent Invoices */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-        <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h3 className="text-lg font-semibold text-slate-900">Facturas Recientes</h3>
-          <Link href="/dashboard/invoices/new" className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors w-full sm:w-auto justify-center">
-            <Plus className="h-4 w-4" />
-            Nueva Factura
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {stats.map((stat, index) => (
+          <StatsCard key={index} {...stat} delay={index * 0.1} />
+        ))}
+      </div>
+
+      {/* Inventory Alert Card */}
+      {lowStockItems.length > 0 && (
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-2xl shadow-sm border-2 border-yellow-200 hover:shadow-lg transition-shadow duration-300">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl shadow-lg">
+                <AlertTriangle className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-slate-900 font-bold text-lg mb-1">⚠️ Alerta de Inventario</h3>
+                <p className="text-slate-600">
+                  Tienes <span className="font-bold text-yellow-700">{lowStockItems.length} productos</span> con stock bajo que requieren atención.
+                </p>
+              </div>
+            </div>
+            <Link 
+              href="/dashboard/inventory"
+              className="flex items-center gap-2 bg-white px-6 py-3 rounded-xl text-sm font-semibold text-slate-900 hover:bg-slate-50 transition-colors shadow-sm border border-slate-200 group"
+            >
+              Ver Inventario
+              <ArrowUpRight className="h-4 w-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Actions */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <h2 className="text-xl font-bold text-slate-900 mb-4">Acciones Rápidas</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Link
+            href="/dashboard/inventory/new"
+            className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50 transition-all group"
+          >
+            <Package className="h-8 w-8 text-slate-400 group-hover:text-blue-600 mb-2" />
+            <span className="text-sm font-medium text-slate-600 group-hover:text-blue-600">Nuevo Producto</span>
           </Link>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-800">
-            <thead className="bg-slate-50 text-slate-900 font-medium">
-              <tr>
-                <th className="px-6 py-4">Tipo</th>
-                <th className="px-6 py-4">N° Factura</th>
-                <th className="px-6 py-4">Entidad</th>
-                <th className="px-6 py-4">Fecha</th>
-                <th className="px-6 py-4">Estado</th>
-                <th className="px-6 py-4 text-right">Monto Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {recentInvoices.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
-                    No hay facturas recientes
-                  </td>
-                </tr>
-              ) : (
-                recentInvoices.map((invoice) => (
-                  <tr key={invoice.id}>
-                    <td className="px-6 py-4">
-                      <span className={cn(
-                        "px-2 py-1 rounded-full text-xs font-medium",
-                        invoice.tipo === 'venta' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                      )}>
-                        {invoice.tipo === 'venta' ? 'Venta' : 'Compra'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 font-medium text-slate-900">{invoice.numero_factura}</td>
-                    <td className="px-6 py-4">{invoice.entidad}</td>
-                    <td className="px-6 py-4">{new Date(invoice.fecha_emision).toLocaleDateString('es-CL')}</td>
-                    <td className="px-6 py-4">
-                      <span className={cn(
-                        "px-2 py-1 rounded-full text-xs",
-                        invoice.estado === 'pagada' && "bg-blue-100 text-blue-700",
-                        invoice.estado === 'pendiente' && "bg-yellow-100 text-yellow-700",
-                        invoice.estado === 'anulada' && "bg-slate-100 text-slate-700"
-                      )}>
-                        {invoice.estado.charAt(0).toUpperCase() + invoice.estado.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right font-medium text-slate-900">
-                      {formatCurrency(invoice.monto_total)}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="p-4 border-t border-slate-200 text-center">
-          <Link href="/dashboard/invoices" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-            Ver todas las facturas &rarr;
+          <Link
+            href="/dashboard/projects/new"
+            className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-slate-300 hover:border-green-500 hover:bg-green-50 transition-all group"
+          >
+            <TrendingUp className="h-8 w-8 text-slate-400 group-hover:text-green-600 mb-2" />
+            <span className="text-sm font-medium text-slate-600 group-hover:text-green-600">Nuevo Proyecto</span>
+          </Link>
+          <Link
+            href="/dashboard/quotes/new"
+            className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-slate-300 hover:border-purple-500 hover:bg-purple-50 transition-all group"
+          >
+            <DollarSign className="h-8 w-8 text-slate-400 group-hover:text-purple-600 mb-2" />
+            <span className="text-sm font-medium text-slate-600 group-hover:text-purple-600">Nueva Cotización</span>
+          </Link>
+          <Link
+            href="/dashboard/inventory/exit"
+            className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-slate-300 hover:border-orange-500 hover:bg-orange-50 transition-all group"
+          >
+            <AlertTriangle className="h-8 w-8 text-slate-400 group-hover:text-orange-600 mb-2" />
+            <span className="text-sm font-medium text-slate-600 group-hover:text-orange-600">Salida Inventario</span>
           </Link>
         </div>
       </div>
